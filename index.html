@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ADFGX Master - NBCTF 2023 Write Up</title>
+</head>
+
+<body>
+    <div id="content">
+        <span class="box">NBCTF 2023</span>
+        <h1>ADFGX Master &ndash; Cryptanalysis <span class="c_red">(500pts)</span></h1>
+
+        For this last cryptography challenge, we're given two files:
+        <ul>
+            <li> <span class="c_prim w_bold">output.txt</span> &ndash; a large encrypted text file</li>
+            <li> <span class="c_prim w_bold">ADFGX_cryptosystem.py</span> &ndash; the python script used to encrypt the
+                message</li>
+        </ul>
+
+        We are told the format of the flag: <span class="w_bold c_green">NBCTF{<span
+                class="w_reg">HIDDEN_MESSAGE</span>}</span>, where the hidden message is found by decrypting
+        output.txt. <br />
+
+        <h2> What are we working with ? </h2>
+
+        Lets first take a quick look at output.txt to get a feel of what's inside, and the format it comes in:
+
+        <pre class="nohighlight"><code
+                class="nohighlight">GADGDXFDDXDGGAGDADDDDAGXXGGAFXXDAFADFXGDGAAFXFGGGAXFAXGDGGADGADAGDDDGXDAGFXDXGDDGDXFDGAAGDFAGGGADDADXGXGGDAGDXXGDDXGDFGFXGGGXXGGDGGXDGDADDAFDGADFDDGADGGDADDAGXGXGDAFXXFXDDDGDADDFGXXAFDXDDGXGGDDGFGDADDGFGDXDGGFAXXXAAGXGDDXDDGDAFDGADFFFGXDFGDFDGFGGGDDAXFAGDXXGXFFFGDGDXXDFDDGDGGGGFAFDDGAAXGADDGXDXGXGDDXDGDDAXFXAFDGAXDFFGDXDXXGXAGFAXDFDGDGDGGFFXXDXAGGGXDGDFAGGFGXAGGGDGDXGDDDGXDXGXDFFADDAXDDGFGAGGGDAGAGGGXGDXGXDGDXGDDDFGGDGADGGGAAGGDAGDGAXGGFGDFGDDAXGGDDGGGXGXADGXDGXFXXXDXFGDDXXDGGGDFDAXDFDDFXXXDDGGA...</code>
+        </pre>
+
+        We pick up on a few things:
+        <ul>
+            <li>The only letter used are A, D, F, G and X</li>
+            <li>No other characters are used (spaces, newlines, braces, ...)</li>
+            <li>The file is weirdly large, I've only put a sample here but the real file is a 21000 characters.</li>
+        </ul>
+
+        <h2> The ADFGX crypto system </h2>
+
+        Now that we have an idea of the encrypted message's format, lets look at the encryption algorithm.
+
+        <div class="note">
+            I've omitted the code for part1 and part2 for clarity, and rewrote / added some comments
+        </div>
+
+        <pre><code class="language-python">import re
+from secret import substitution_matrix
+
+letters = ["A", "D", "F", "G", "X"]
+
+def part1(plaintext):
+    # ...
+
+def part2(pre_ciphertext):
+    # ...
+
+# Get the clear text message
+text = open("lettre_confidentiel.txt").read()
+# Remove all characters that aren't in A-V or X-Z (lower and upper)
+p = re.compile('[A-VX-Z]')
+plaintext = "".join(p.findall(text.upper()))
+# encrypt in two steps:
+## Character substitution
+pre_ciphertext = part1(plaintext)
+## Column reordering
+ciphertext = part2(pre_ciphertext)
+# Print and write the encrypted message
+print(ciphertext)
+f = open("output.txt", "w")
+f.write(ciphertext)
+        </code></pre>
+
+        Skimming over <code>part1</code> and <code>part2</code> the program is relatively simple, some characters are
+        eliminated (the ones that can't be processed by the system), and the encryption is performed in two steps, in
+        our case we'll need to first reverse <code>part2</code> and then <code>part1</code> to get the clear output.
+
+        <h2> Reversing <code>part2</code> &ndash; column reordering </h2>
+
+        The code for part2 is as such:
+
+        <pre><code class="language-python">def part2(pre_ciphertext):
+    key = "nobracket"
+
+    ## Index of the key in alphabetic order
+    n = len(key)
+    key_index = sorted(range(n), key=lambda i: key[i])
+
+    ## Padding to make sure the size of pre_ciphertext
+    ## is a multiple of the key's
+    while len(pre_ciphertext)%n != 0:
+        pre_ciphertext = pre_ciphertext + "X"
+
+    ## Column reordering
+
+    # permutation
+    ciphertext = ""
+    for i in range(len(pre_ciphertext)//n):
+        for j in key_index:
+            ciphertext = ciphertext + pre_ciphertext[i*n + j]
+
+    # transposition
+    true_cipher = ""
+    for i in range(n):
+        for j, c in enumerate(ciphertext):
+            if j%n == i :
+                true_cipher = true_cipher + c
+
+    return true_cipher
+        </code></pre>
+
+        <code>part2</code> is made up of two major steps that I will call permutation and transposition. There is also a
+        padding step before that, but this is irreversible as there is no way to know if the characters are padding or
+        actually part of the message from the encrypted text alone. Luckily this doesn't matter much.
+
+        <h3> Transposition </h3>
+
+        Here is the code:
+
+        <pre><code class="language-python">true_cipher = ""
+for i in range(n): # outer
+    for j, c in enumerate(ciphertext): # inner
+        if j%n == i :
+            true_cipher = true_cipher + c
+        </code></pre>
+
+        Lets start from the inner loop, we iterate over all the characters in <code>ciphertext</code> (along with their
+        indices j), filter some out and append the rest to <code>true_cipher</code>. To understand the <code>j %
+            n</code> part, we can imagine splitting the cipher text into many chunks of length n, we then only keep the
+        elements which are the i<sup>th</sup> of their respective chunks:
+
+        <div id="vis_transpose" class="vis clickable">
+            <div class="meta_line">
+                <div class="iter">n = </div>
+                <div class="middle">ciphertext</div>
+                <div class="info"></div>
+            </div>
+            <div class="line_1 line"></div>
+            <div class="meta_line">
+                true_cipher
+            </div>
+            <div class="line_2 line"></div>
+        </div>
+
+        <div class="note">
+            If we interpret the ciphertext as a <a href="https://en.wikipedia.org/wiki/Row-_and_column-major_order">row
+                major</a> matrix (with rows of length n), this code effectively computes the <a
+                href="https://en.wikipedia.org/wiki/Transpose">transpose</a> of this matrix, hence the name.
+            <br />
+            <br />
+            As taking the transpose of the transpose of a matrix does nothing, the code to reverse the transposition
+            would be the same as the one doing transposition with <code>n</code> replaced with <code>len(ciphertext) //
+                n</code> (the transposed matrix's width).
+        </div>
+
+        Now that we have a good understanding of the process, we can start writing our <code>reverse_part2</code>
+        function:
+
+        <pre><code class="language-python">def reverse_part2(true_cipher):
+    key = "nobracket"
+    n = len(key)
+
+    ciphertext = ""
+    # number of chunks of length n in ciphertext
+    m = len(true_cipher) // n
+    # reconstruct each chunk one by one
+    for i in range(m):
+        # if ciphertext contained [a0, a1, a2, ..., b0, b1, b2, ...]
+        #                    (i = 1)  0   1   2
+        # then true_cipher contains [a0, b0, c0, ..., a1, b1, c1, ...]
+        #                                 └─────── m ──────┘
+        # So we start from i and skip m to get to the next one in the
+        # chunk and do that for each chunk (the outer for)
+        for j in range(i, len(true_cipher), m)
+            ciphertext = ciphertext + true_cipher[j]
+            </code></pre>
+
+        <h3> Permutation </h3>
+
+        At this point we are done with half of <code>part2</code> and we just need to reverse the permutation step
+        before we can move on to <code>part1</code>. Here is the code:
+
+        <pre><code class="language-python"># setup
+key = "nobracket"
+n = len(key)
+key_index = sorted(range(n), key=lambda i: key[i])
+
+# permutation
+ciphertext = ""
+for i in range(len(pre_ciphertext)//n):
+    for j in key_index:
+        # index of the first character in the chunk ┐
+        ciphertext = ciphertext + pre_ciphertext[(i * n) + j]
+        #                              offset in the chunk ┘
+            </code></pre>
+
+        First the setup: most of it is around computing <code>key_index</code>, which is just a reordered
+        <code>range(n)</code>. Then the loops, we again imagine splitting our input in consecutive chunks of length n,
+        and iterate over the index i of each chunk. The inner loop simply adds all the characters of the chunk to
+        ciphertext in the order prescribed by <code>key_index</code>. Effectively this permutates, or reorders the
+        characters in every chunk.
+
+        <div id="vis_permute" class="vis clickable">
+            <div class="label">key index</div>
+            <div class="cells cells_key_index"></div>
+            <div class="label">chunk</div>
+            <div class="cells cells_chunk"></div>
+            <div class="label">reordered</div>
+            <div class="cells cells_result"></div>
+            <div class="label">key index reverse</div>
+            <div class="cells cells_key_index_reverse"></div>
+            <div class="label">reversed</div>
+            <div class="cells cells_reversed"></div>
+        </div>
+
+        We can now reverse this and finish our <code>reverse_part2</code> function:
+        <pre><code class="language-python">def reverse_part2(true_cipher):
+    key = "nobracket"
+    # key_index = [4, 2, 5, 7, 6, 0, 1, 3, 8] this means each reordered
+    # chunk will have, in order, the 5th, 3rd, 6th, 8th, ..., characters.
+    key_index = sorted(range(n), key=lambda i: key[i])
+    # compute the reverse permutation in the same way
+    # this verrifies: key_index[key_index_reverse[i]] == i
+    # key_index_reverse = [5, 6, 1, 7, 0, 2, 4, 3, 8]
+    key_index_reverse = sorted(range(n), key=lambda i: key_index[i])
+    n = len(key)
+
+    # reverse transposition
+    ciphertext = ""
+    # number of chunks of length n in ciphertext
+    m = len(true_cipher) // n
+    for i in range(m):
+        for j in range(i, len(true_cipher), m)
+            ciphertext = ciphertext + true_cipher[j]
+
+    # reverse permutation
+    pre_ciphertext = ""
+    for i in range(m):
+        for j in key_index_reverse:
+            pre_ciphertext = pre_ciphertext + ciphertext[i * n + j]
+
+    return pre_ciphertext
+
+            </code></pre>
+
+        <h3> Testing </h3>
+
+        At this stage we can run a little test to make sure we got it right, this way, if later we have a problem, we'll
+        know to only look into <code>reverse_part1</code> since we made sure <code>reverse_part2</code> is right.
+
+        <pre><code class="language-python"># length 18 since we don't reverse padding
+test_input = "ADFGXAADDDFFFFXGXAA"
+print(reverse_part2(part2(test_input)) == test_input)
+            </code></pre>
+
+        If this prints <code>True</code> we know we're good, if it doesn't, we need to debug.
+
+        <h2> Reversing <code>part1</code> &ndash; substitution map </h2>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
