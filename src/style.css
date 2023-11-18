@@ -1,15 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
 
-@font-face {
-  font-family: 'Iosevka';
-  font-style: normal;
-  font-weight: 400;
-  src: 
-    url('/assets/iosevka.woff2') format('woff2'),
-    url('/assets/iosevka.woff') format('woff'),
-    url('/assets/iosevka.ttf') format('ttf');
-}
-
 :root {
   --c-bg: #191919;
   --c-bg-light: #202020;
@@ -62,7 +52,7 @@ body {
 }
 
 code {
-  font-family: 'Iosevka';
+  font-family: 'Iosevka Term';
 }
 
 *:not(pre):not(h1):not(h2):not(h3) > code {
@@ -204,6 +194,15 @@ a {
   display: flex;
 }
 
+#vis_permute .restart {
+  font-size: 0.9em;
+  color: var(--c-black-bright);
+  height: 1em;
+  text-align: center;
+  width: auto;
+  grid-column: span 2;
+}
+
 @media screen and (max-width: 29em) {
   #vis_permute .label {
     font-size: 0.7em;
@@ -212,4 +211,41 @@ a {
 
 .strike {
   text-decoration: line-through;
+}
+
+#vis_end {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+@media screen and (max-width: 35em) {
+  #vis_end {
+    font-size: 0.8em;
+  }
+}
+
+@media screen and (max-width: 28em) {
+  #vis_end {
+    font-size: 0.6em;
+  }
+}
+
+#vis_end #submap {
+  font-size: 1.2em;
+  padding: 0.4em 2em;
+  outline: 2px solid var(--c-black);
+  width: fit-content;
+  z-index: 2;
+  background: var(--c-bg);
+  position: relative;
+}
+
+#vis_end #l7 {
+  z-index: -1;
+  position: relative;
+}
+
+#vis_end #l7 .cell {
+  opacity: 0;
 }

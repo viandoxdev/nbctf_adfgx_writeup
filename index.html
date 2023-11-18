@@ -32,14 +32,14 @@
 
         We pick up on a few things:
         <ul>
-            <li>The only letter used are A, D, F, G and X</li>
-            <li>No other characters are used (spaces, newlines, braces, ...)</li>
-            <li>The file is weirdly large, I've only put a sample here but the real file is a 21000 characters.</li>
+            <li>The only letters used are A, D, F, G and X</li>
+            <li>No other characters are used (no space, no newline, no brace, ...)</li>
+            <li>The file is weirdly large, I've only put a sample here but the real file is 21000 characters long.</li>
         </ul>
 
         <h2> The ADFGX crypto system </h2>
 
-        Now that we have an idea of the encrypted message's format, lets look at the encryption algorithm.
+        Now that we have an idea of the encrypted message's format, lets take a look at the encryption algorithm.
 
         <div class="note">
             I've omitted the code for part1 and part2 for clarity, and rewrote / added some comments
@@ -73,8 +73,8 @@ f.write(ciphertext)
         </code></pre>
 
         Skimming over <code>part1</code> and <code>part2</code> the program is relatively simple, some characters are
-        eliminated (the ones that can't be processed by the system), and the encryption is performed in two steps, in
-        our case we'll need to first reverse <code>part2</code> and then <code>part1</code> to get the clear output.
+        eliminated (the ones that can't be processed by the system), and the encryption is performed in two steps. 
+        To decrypt the message, we'll need to first reverse <code>part2</code> and then <code>part1</code>.
 
         <h2> Reversing <code>part2</code></h2>
 
@@ -196,9 +196,9 @@ for i in range(len(pre_ciphertext)//n):
             </code></pre>
 
         First the setup: most of it is around computing <code>key_index</code>, which is just a reordered
-        <code>range(n)</code>. Then the loops, we again imagine splitting our input in consecutive chunks of length n,
+        <code>range(n)</code>. Then, for the loops, we again imagine splitting our input in consecutive chunks of length n,
         and iterate over the index i of each chunk. The inner loop simply adds all the characters of the chunk to
-        ciphertext in the order prescribed by <code>key_index</code>. Effectively this permutates, or reorders the
+        ciphertext in the order prescribed by <code>key_index</code>. Effectively this permutes / reorders the
         characters in every chunk.
 
         <div id="vis_permute" class="vis clickable">
@@ -212,6 +212,7 @@ for i in range(len(pre_ciphertext)//n):
             <div class="cells cells_key_index_reverse"></div>
             <div class="label">reversed</div>
             <div class="cells cells_reversed"></div>
+            <div class="restart"> a</div>
         </div>
 
         We can now reverse this and finish our <code>reverse_part2</code> function:
@@ -247,7 +248,7 @@ for i in range(len(pre_ciphertext)//n):
         <h3> Testing </h3>
 
         At this stage we can run a little test to make sure we got it right, this way, if later we have a problem, we'll
-        know to only look into <code>reverse_part1</code> since we made sure <code>reverse_part2</code> is right.
+        know to only look into <code>reverse_part1</code> since we made sure <code>reverse_part2</code> is correct.
 
         <pre><code class="language-python"># length 18 since we don't reverse padding
 test_input = "ADFGXAADDDFFFFXGXAA"
@@ -276,20 +277,20 @@ print(reverse_part2(part2(test_input)) == test_input)
         </code></pre>
 
         But unfortunatly, this time around simply reversing the code won't suffice, since the crux of the encryption lies in <code>substitution_matrix</code>, which we don't have access to. <br />
-    <br />
-    For each character:
-    <ol>
-        <li>We get the index of the character in the substitution matrix.</li>
-        <li>We convert that index into a row and column number. This effectively interprets the substitution matrix as a 5x5 row major matrix.</li>
-        <li>Convert the column and row number (in the range 0-4) into letters (A, D, F, G and X)</li>
-        <li>Add those two characters to the (pre) ciphertext text</li>
-    </ol>
+        <br />
+        For each character:
+        <ol>
+            <li>We get the index of the character in the substitution matrix.</li>
+            <li>We convert that index into a row and column number. You can think of the matrix as a 5 by 5 table.</li>
+            <li>Convert the column and row number (in the range 0-4) into letters (A, D, F, G and X)</li>
+            <li>Add those two characters to the (pre) ciphertext text</li>
+        </ol>
 
-    <h3> Going as far as we can go </h3>
+        <h3> Going as far as we can go </h3>
 
-    We can at least reverse that before having to actually tackle the problem of getting the substitution matrix:
+        We can at least reverse until we get to the substitution:
 
-    <pre><code class="language-python"> def reverse_part1(pre_ciphertext):
+        <pre><code class="language-python"> def reverse_part1(pre_ciphertext):
     # dict mapping each letter to its value
     letters = { "A": 0, "D": 1, "F": 2, "G": 3, "X": 4 }
     pre_plaintext = [
@@ -301,29 +302,27 @@ print(reverse_part2(part2(test_input)) == test_input)
         #              └────────── get all consecutive pairs ──────────┘
         #                   i.e. "ADFGX" =&gt; ("A", "D"), ("F", "G")
     ]
-    </code></pre>
+        </code></pre>
 
-    TODO: Visualization<br /><br />
+        <code>pre_plaintext</code> is now a list of numbers between 0 and 24 each corresponding to a letter of the alphabet (without W). The problem now is how do we figure out which number means which letter ?
 
-    <code>pre_plaintext</code> is now a list of numbers between 0 and 24 each corresponding to a letter of the alphabet (without W). The problem now is how do we figure out which number means which letter ?
+        <h2> Finding <span class="strike">nemo</span> the substitution matrix </h2>
 
-    <h2> Finding <span class="strike">nemo</span> the substitution matrix </h2>
+        When tasked with a search problem like that, the first approach I tend to think of is <a href="https://en.wikipedia.org/wiki/Brute-force_search">bruteforce</a>. It's plain, simple, and surprisingly works most of the time, and even when it doesn't you can often just improve on it to get a working solution (by reducing the search space for example).<br />
+        <br/>
+        Unfortunately for us though, bruteforce isn't really an option here, simple math will reveal that there are 15,511,210,043,330,985,984,000,000 different possible substitution matrices and that even if we could check one per cpu cycle on a relatively fast cpu, the search would still take on average a little more than 60 million years. <br />
+        <br />
+        Another approach is to simply try some obvious solutions, for example A, B, C, D, ..., Z but simple testing reveals that this isn't going to cut it either.
 
-    When tasked with a search problem like that, the first approach I tend to think of is <a href="https://en.wikipedia.org/wiki/Brute-force_search">bruteforce</a>. It's plain, simple, and surprisingly works most of the time, and even when it doesn't you can often just improve on it to get a working solution (by reducing the search space for example).<br />
-    <br/>
-    Unfortunatly for us though, bruteforce isn't really an option here, simple math will reveal that there are 15,511,210,043,330,985,984,000,000 different possible substitution matrices and that even if we could check one per cpu cycle on a relatively fast cpu, the search would still take on average a little more than 60 million years. <br />
-    <br />
-    Another approach is to simply try some obvious solutions, for example A, B, C, D, ..., Z but simple testing reveals that this isn't going to cut it either.
+        <h3> The actual answer </h3>
+        
+        The real answer lies in an observation we made in the beginning: the size of the input message. We know for a fact the flag isn't nearly as long as that, and now that we understand the encryption algorithm, we also know that the encrypted version is twice as long as the clear text one, as such it doesn't make sense for the message to be this long.<br />
+        </br >
+        On top of that we know the message has to be correct french as we wouldn't have any way of knowing if we decrypted right otherwise. Knowing that, one method we can use of decrypting this kind of substitution encryption is to use <a href="https://en.wikipedia.org/wiki/Letter_frequency">letter frequency</a> (how often does each letter appear in a text).<br />
+        <br />
+        The frequency of each letter in any large enough text tend to be the same. This is because some of the same words are used many times (a, the, of, ...), and because some letters are just more common (i.e there are way more words with 's' in them than words with 'x'). We can use this to our advantage: we just need to get a sorted list of the 25 most commonly used letters, count the frequency of each index in <code>pre_plaintext</code>, and then match each index to a letter depending on its frequency.
 
-    <h3> The actual answer </h3>
-    
-    The real answer lies in an observation we made in the begining: the size of the input message. We know for a fact the flag isn't nearly as long as that, and now that we understand the encryption algorithm, we also know that the encrypted version is twice as long as the clear text one, as such it doesn't make sense for the message to be this long.<br />
-    </br >
-    On top of that we know the message has to be correct french as we wouldn't have any way of knowing if we decrypted right otherwise. Knowing that, one method we can use of decrypting this kind of substitution encryption is to use <a href="https://en.wikipedia.org/wiki/Letter_frequency">letter frequency</a> (how often does each letter appear in a text).<br />
-    <br />
-    The frequency of each letter in any large enough text tend to be the same. This is because some of the same words are used many times (a, the, of, ...), and because some letters are just more common (i.e there are way more words with 's' in them than words with 'x'). We can use this to our advantage: we just need to get a sorted list of the 25 most commonly used letters, count the frequency of each index in <code>pre_plaintext</code>, and then match each index to a letter depending on its frequency.
-
-    <pre><code class="language-python"># letters sorted by frequency (in french)
+        <pre><code class="language-python"># letters sorted by frequency (in french)
 letters_freq = "EAISNRTOLUDCMPGBVHFQYXJKZ"
 # count the number of time each index is used in pre_plaintext
 index_count = [0] * 25
@@ -346,12 +345,12 @@ for freq_rank in range(25):
 plaintext = ""
 for i in pre_plaintext:
     plaintext = plaintext + substitution_map[i]
-    </code></pre>
+        </code></pre>
 
-    <h2> Finishing up </h2>
+        <h2> Finishing up </h2>
 
-    The final code looks like this:
-    <pre><code class="language-python">def reverse_part2(true_cipher):
+        The final code looks like this:
+        <pre><code class="language-python">def reverse_part2(true_cipher):
     key = "nobracket"
     n = len(key)
     key_index = sorted(range(n), key=lambda i: key[i])
@@ -401,22 +400,36 @@ pre_ciphertext = reverse_part2(true_cipher)
 cleartext = reverse_part1(pre_ciphertext)
 
 print(cleartext)
-    </code></pre>
+        </code></pre>
 
-    Running it produces this output:
-    <pre class="nohighlight"><code class="nohighlight">CHERSAMISETFAMILLEJEPRENDSQUELQUESINSTANTSPOURVOUSECRIREDEPUIS...
+        Running it produces this output:
+        <pre class="nohighlight"><code class="nohighlight">CHERSAMISETFAMILLEJEPRENDSQUELQUESINSTANTSPOURVOUSECRIREDEPUIS...
 ...POURLEFLAGLEVOICIATTENTIONALANALYSEFREQUENTIELLEPETITSOLDATUUU</code></pre>
 
-    Which, by the way, translates to
-    <pre class="nohighlight"><code class="nohighlight">DEARFRIENDSANDFAMILYITAKEAFEWMOMENTSTOWRITETOYOUFROM...
+        Which, by the way, translates to
+        <pre class="nohighlight"><code class="nohighlight">DEARFRIENDSANDFAMILYITAKEAFEWMOMENTSTOWRITETOYOUFROM...
 ...ASFORTHEFLAGHEREISITBECAREFULOFFREQUENCYANALYSISLITTLESOLDIERUUU</code></pre>
 
-    <div class="note">
-        The message finishes with "UUU" this is because as we said before, we can't reverse the padding step, so we get a few extra characters.
-    </div>
+        <div class="note">
+            The message finishes with "UUU" because, as we said before, we can't reverse the padding step, so we get a few extra characters.
+        </div>
 
-    The flag is then <span class="w_bold c_green">NBCTF{<span class="w_reg">ATTENTIONALANALYSEFREQUENTIELLEPETITSOLDAT</span>}</span> !
+        The flag is then <span class="w_bold c_green">NBCTF{<span class="w_reg">ATTENTIONALANALYSEFREQUENTIELLEPETITSOLDAT</span>}</span> !
 
+        <h2> Conclusion </h2>
+
+        While this write up focused quite a lot on the programming part of the challenge, the crux was simply thinking of using letter frequency. I just went into as much details as possible since NBCTF is aimed at beginners and I didn't want to assume a high level of experience in python and programming in general.
+
+        <div id="vis_end" class="vis clickable">
+            <div class="line" id="l1"></div>
+            <div class="line" id="l2"></div>
+            <div class="line" id="l3"></div>
+            <div class="line" id="l4"></div>
+            <div class="line" id="l5"></div>
+            <div class="line" id="l6"><div id="submap">SUBSTITUTION MAP</div></div>
+            <div class="line" id="l7"></div>
+            <div class="line" id="l8"></div>
+        </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
 </body>
