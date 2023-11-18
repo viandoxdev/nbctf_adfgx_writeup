@@ -209,3 +209,7 @@ a {
     font-size: 0.7em;
   }
 }
+
+.strike {
+  text-decoration: line-through;
+}

@@ -9,7 +9,7 @@ hljs.registerLanguage('python', python);
 hljs.highlightAll();
 
 /// @ts-ignore
-anime.suspendWhenDocumentHidden = false;
+anime.suspendWhenDocumentHidden = true;
 
 const colors = {
     bg: "#191919",
