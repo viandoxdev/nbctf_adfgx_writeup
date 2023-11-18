@@ -233,7 +233,7 @@ a {
 
 #vis_end #submap {
   font-size: 1.2em;
-  padding: 0.4em 2em;
+  padding: 0.4em 1em;
   outline: 2px solid var(--c-black);
   width: fit-content;
   z-index: 2;
