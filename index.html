@@ -333,7 +333,7 @@ for i in pre_plaintext:
 # the first element is the most used index
 index_freq = sorted(range(25), # all indices
                     key=lambda i: index_count[i], # order by count
-                    reverseTrue) # in decreasing order
+                    reverse=True) # in decreasing order
 # map instead of matrix because we no longer have 2 dimensions
 substitution_map = ["_"] * 25 # dummy values
 # build the map, freq_rank is the place of the letter/index
